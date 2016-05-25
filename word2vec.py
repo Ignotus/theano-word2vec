@@ -1,7 +1,7 @@
 import sys
 import time
-#reload(sys)
-#sys.setdefaultencoding('utf8')
+import io
+import codecs
 
 import cPickle as pickle
 
@@ -49,6 +49,7 @@ class Corpus:
 
     def parse(self, data_folder, vocab_size):
         import glob
+        import locale
         from collections import Counter
 
         self.word_freq = Counter()
