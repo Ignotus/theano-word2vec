@@ -1,4 +1,5 @@
 import sys
+import time
 reload(sys)
 sys.setdefaultencoding('utf8')
 
@@ -13,6 +14,15 @@ import theano.tensor as T
 from nltk.tokenize import word_tokenize
 
 __all__ = ['SkipGram', 'CBOW', 'Corpus']
+
+
+def profile(func):
+    def inner(*args, **kwargs):
+        time1 = time.time()
+        result = func(*args, **kwargs)
+        print('Took %d seconds' % int(time.time() - time1))
+        return result
+    return inner
 
 
 def normal(loc=0.0, scale=0.1, size=1, dtype=theano.config.floatX):
@@ -108,7 +118,7 @@ class Word2VecBase(object):
                                    name='W_out', borrow=True)
 
         nsentences = len(corpus.sentences)
-        ten_percent = -nsentences // 10
+        ten_percent = nsentences // 10
         self.corpus = corpus
         self.train_sentences = self.corpus.sentences[:ten_percent * 9]
         self.valid_sentences = self.corpus.sentences[-ten_percent:]
@@ -153,6 +163,7 @@ class Word2VecBase(object):
 
         return loss, loss_changes
 
+    @profile
     def eval_epoch(self, window_size, batch_size):
         losses = []
         for batch in range(0, len(self.valid_sentences), batch_size):
@@ -160,17 +171,17 @@ class Word2VecBase(object):
             targets = []
             batch_sentences = self.valid_sentences[batch:batch + batch_size]
             for sentence in batch_sentences:
-                max_idx = len(sentence) - 1
                 for idx in range(window_size, len(sentence) - window_size):
                     center_word_idx = sentence[idx]
-                    target_word_indexes = sentence[max(0, idx - window_size):idx] +\
-                                          sentence[min(idx + 1, max_idx):idx + window_size + 1]
+                    target_word_indexes = sentence[idx - window_size:idx] +\
+                                          sentence[idx + 1:idx + window_size + 1]
                     centers.append(center_word_idx)
                     targets.append(target_word_indexes)
             [c_cost] = self.eval_model(centers, targets)
             losses.append(c_cost)
         return np.mean(losses)
 
+    @profile
     def train_epoch(self, window_size, batch_size):
         losses = []
 
