@@ -1,7 +1,5 @@
 import sys
 import time
-import io
-import codecs
 
 import cPickle as pickle
 
@@ -49,7 +47,6 @@ class Corpus:
 
     def parse(self, data_folder, vocab_size):
         import glob
-        import locale
         from collections import Counter
 
         self.word_freq = Counter()
@@ -67,6 +64,8 @@ class Corpus:
         top_words = sorted(self.word_freq.items(), key=itemgetter(1), reverse=True)[:vocab_size]
 
         self.word_freq = Counter()
+
+        # TODO: Remove that
         self.word_to_idx = dict()
 
         for word, freq in top_words:
@@ -75,8 +74,6 @@ class Corpus:
 
         self.word_freq['UNK'] = 0
         self.word_to_idx['UNK'] = len(self.word_to_idx)
-
-        self.idx_to_word = top_words + ['UNK']
 
         def token_to_idx(token):
             if token in self.word_to_idx:
@@ -199,6 +196,8 @@ class Word2VecBase(object):
                     centers.append(center_word_idx)
                     targets.append(target_word_indexes)
             [c_cost] = self.train_model(centers, targets)
+            if batch % 1000:
+                print 'Loss:', c_cost
             losses.append(c_cost)
         return np.mean(losses), losses
 
