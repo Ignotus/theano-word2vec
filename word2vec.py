@@ -1,7 +1,7 @@
 import sys
 import time
-reload(sys)
-sys.setdefaultencoding('utf8')
+#reload(sys)
+#sys.setdefaultencoding('utf8')
 
 import cPickle as pickle
 
@@ -111,10 +111,10 @@ class Corpus:
 class Word2VecBase(object):
     def __init__(self, vector_size, corpus):
         vocabs_size = corpus.vocabs_size()
-        self.W_in = theano.shared(value=normal(scale=1./vocabs_size, size=[vocabs_size, vector_size]),
+        self.W_in = theano.shared(value=normal(scale=1./(vocabs_size * vector_size), size=[vocabs_size, vector_size]),
                                   name='W_in', borrow=True)
 
-        self.W_out = theano.shared(value=normal(scale=1./vocabs_size, size=(vector_size, vocabs_size)),
+        self.W_out = theano.shared(value=normal(scale=1./(vocabs_size * vector_size), size=(vector_size, vocabs_size)),
                                    name='W_out', borrow=True)
 
         nsentences = len(corpus.sentences)
@@ -135,8 +135,8 @@ class Word2VecBase(object):
 
     def save(self, file_name):
         with open(file_name, 'w') as f:
-            pickle.dump(self.W_in.eval(), f)
-            pickle.dump(self.W_out.eval(), f)
+            pickle.dump(np.asarray(self.W_in.eval()), f)
+            pickle.dump(np.asarray(self.W_out.eval()), f)
 
     def train(self, window_size=5, learning_rate=0.01, epochs=10, batch_size=10,
               update_function=lasagne.updates.adagrad):
@@ -157,9 +157,9 @@ class Word2VecBase(object):
             loss, losses = self.train_epoch(window_size, batch_size)
             loss_changes += losses
 
-            print 'Epoch %d, Loss %.3f' % (epoch, loss)
+            print 'Epoch %d, Loss %.6f' % (epoch, loss)
             eval_loss = self.eval_epoch(window_size, batch_size)
-            print 'Evaluation Loss %.3f' % eval_loss
+            print 'Evaluation Loss %.6f' % eval_loss
 
         return loss, loss_changes
 
@@ -203,43 +203,28 @@ class Word2VecBase(object):
 
 
 class SkipGram(Word2VecBase):
-    def __init__(self, vector_size, corpus):
+    def __init__(self, vector_size, corpus, lamb=None):
         super(SkipGram, self).__init__(vector_size, corpus)
         # [1, vector_size]
-        hidden = self.W_in[self.center_word]
+        hidden = T.nnet.relu(self.W_in[self.center_word])
 
         # [1, vector_size] x [vector_size, vocabs_size] = [1 x vocabs_size]
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
         self.loss = -T.sum(Z.T[self.context], axis=1)
         self.loss = self.loss.mean()
+        if lamb != None:
+            self.loss += lamb * lasagne.regularization.l2(self.W_in)
 
 
 class CBOW(Word2VecBase):
-    def __init__(self, vector_size, corpus):
+    def __init__(self, vector_size, corpus, lamb=None):
         super(CBOW, self).__init__(vector_size, corpus)
 
-        hidden = T.sum(self.W_in[self.context], axis=0)
+        hidden = T.nnet.relu(T.sum(self.W_in[self.context], axis=0))
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
         self.loss = -T.sum(Z.T[self.center_word], axis=1)
         self.loss = self.loss.mean()
-
-
-if __name__ == '__main__':
-    corpus = Corpus('data/', corpus_file='corpus')
-
-    vector_size = 200
-    context_window_size = 5
-    epochs = 10
-    learning_rate = 0.01
-
-    trainer = SkipGram(vector_size, corpus)
-    loss = trainer.train(context_window_size, learning_rate, epochs)
-
-    trainer.save('skip_gram.npy')
-    trainer.load('skip_gram.npy')
-
-    trainer = CBOW(vector_size, corpus)
-    loss = trainer.train(context_window_size, learning_rate, epochs)
-
+        if lamb != None:
+            self.loss += lamb * lasagne.regularization.l2(self.W_in)
 

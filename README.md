@@ -7,9 +7,11 @@ and their Compositionality](http://papers.nips.cc/paper/5021-distributed-represe
 
 ## Deviations
 
-* Support of batch training. Padding by UNK tokens at the beginning and at the end of sentences has made it possible.
-* AdaGrad gradient update.
-* The corpus is separated into two parts. 10% is used for validation.
+* Support of batch training. Padding by UNK tokens at the beginning and at the end of sentences has made it possible
+* AdaGrad gradient update
+* The corpus is separated into two parts. 10% is used for validation
+* L2 regularization
+* ReLU activation unit for hidden layers
 
 ## Dependencies
 
@@ -21,8 +23,11 @@ and their Compositionality](http://papers.nips.cc/paper/5021-distributed-represe
 ## Testing
 
 ```bash
-python word2vec.py
+python word2vec_test.py --skip_gram
+python word2vec_test.py --cbow
 ```
+
+Please also check [evaluation.ipynb](evaluation.ipynb) for evaluation routines.
 
 ## License
 
