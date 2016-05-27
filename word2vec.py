@@ -33,7 +33,6 @@ class Corpus:
         corpus_file_path = '%s.npy' % corpus_file
         self.word_freq = None
         self.word_to_idx = None
-        self.idx_to_word = None
         self.sentences = None
 
         if corpus_file and os.path.isfile(corpus_file_path):
@@ -95,14 +94,12 @@ class Corpus:
         with open(file_name, 'r') as f:
             self.word_freq = pickle.load(f)
             self.word_to_idx = pickle.load(f)
-            self.idx_to_word = pickle.load(f)
             self.sentences = pickle.load(f)
 
     def save(self, file_name):
         with open(file_name, 'w') as f:
             pickle.dump(self.word_freq, f)
             pickle.dump(self.word_to_idx, f)
-            pickle.dump(self.idx_to_word, f)
             pickle.dump(self.sentences, f)
 
 
@@ -196,7 +193,7 @@ class Word2VecBase(object):
                     centers.append(center_word_idx)
                     targets.append(target_word_indexes)
             [c_cost] = self.train_model(centers, targets)
-            if batch % 1000:
+            if batch % 10000 == 0:
                 print 'Loss:', c_cost
             losses.append(c_cost)
         return np.mean(losses), losses
