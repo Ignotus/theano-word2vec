@@ -3,11 +3,8 @@ import time
 
 import cPickle as pickle
 
-import lasagne
-import numpy as np
 
-import theano
-import theano.tensor as T
+import numpy as np
 
 from nltk.tokenize import word_tokenize
 
@@ -23,7 +20,7 @@ def profile(func):
     return inner
 
 
-def init_glorot(loc=0.0, scale=0.1, size=1, dtype=theano.config.floatX):
+def init_glorot(loc=0.0, scale=0.1, size=1, dtype=np.float32):
     return np.random.normal(loc=loc, scale=scale, size=size).astype(dtype) * np.sqrt(2. / np.prod(size))
 
 
@@ -107,6 +104,10 @@ class Corpus:
 
 class Word2VecBase(object):
     def __init__(self, vector_size, corpus, lamb=None):
+        import theano
+        import theano.tensor as T
+        import lasagne
+
         vocabs_size = corpus.vocabs_size()
         self.W_in = theano.shared(value=init_glorot(scale=1./(vocabs_size * vector_size), size=[vocabs_size, vector_size]),
                                   name='W_in', borrow=True)
@@ -213,6 +214,8 @@ class Word2VecBase(object):
 
 class SkipGram(Word2VecBase):
     def _init_model(self):
+        import theano.tensor as T
+
         # [1, vector_size]
         hidden = T.nnet.relu(self.W_in[self.center_word])
 
@@ -224,6 +227,7 @@ class SkipGram(Word2VecBase):
 
 class CBOW(Word2VecBase):
     def _init_model(self):
+        import theano.tensor as T
         hidden = T.nnet.relu(T.sum(self.W_in[self.context], axis=0))
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
