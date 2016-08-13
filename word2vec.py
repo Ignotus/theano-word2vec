@@ -85,6 +85,8 @@ class Corpus:
                 for sentence in f:
                     # Use nltk tokenizer to split the sentence into words
                     words = map(token_to_idx, filter(lambda word: word.isalpha(), word_tokenize(sentence.lower())))
+                    if len(words) == 0:
+                        continue
                     self.sentences.append(words)
 
     def vocabs_size(self):
@@ -104,7 +106,7 @@ class Corpus:
 
 
 class Word2VecBase(object):
-    def __init__(self, vector_size, corpus):
+    def __init__(self, vector_size, corpus, lamb=None):
         vocabs_size = corpus.vocabs_size()
         self.W_in = theano.shared(value=init_glorot(scale=1./(vocabs_size * vector_size), size=[vocabs_size, vector_size]),
                                   name='W_in', borrow=True)
@@ -121,7 +123,21 @@ class Word2VecBase(object):
         self.center_word = T.ivector('center_word')
         self.context = T.imatrix('context')
 
-        self.loss = None
+        self.learning_rate = T.scalar('learning_rate')
+
+        self.loss = self._init_model().mean()
+
+        if lamb != None:
+            self.loss += lamb * lasagne.regularization.l2(self.W_in)
+
+        updates = lasagne.updates.adagrad(self.loss, [self.W_in, self.W_out], self.learning_rate)
+        self.train_model = theano.function([self.learning_rate, self.center_word, self.context], [self.loss], updates=updates)
+        self.eval_model = theano.function([self.center_word, self.context], [self.loss])
+
+
+    def _init_model(self):
+        # This method should return a cost function
+        raise NotImplemented
 
     def load(self, file_name):
         with open(file_name, 'r') as f:
@@ -133,11 +149,7 @@ class Word2VecBase(object):
             pickle.dump(np.asarray(self.W_in.eval()), f)
             pickle.dump(np.asarray(self.W_out.eval()), f)
 
-    def train(self, window_size=5, learning_rate=0.01, epochs=10, batch_size=10,
-              update_function=lasagne.updates.adagrad):
-        updates = update_function(self.loss, [self.W_in, self.W_out], learning_rate=learning_rate)
-        self.train_model = theano.function([self.center_word, self.context], [self.loss], updates=updates)
-        self.eval_model = theano.function([self.center_word, self.context], [self.loss])
+    def train(self, window_size=5, learning_rate=0.01, epochs=10, batch_size=10):
         print 'Start Training'
 
         # Padding the beginning and the end of sentences
@@ -149,7 +161,7 @@ class Word2VecBase(object):
         loss_changes = []
         for epoch in range(epochs):
             np.random.shuffle(self.train_sentences)
-            loss, losses = self.train_epoch(window_size, batch_size)
+            loss, losses = self.train_epoch(window_size, batch_size, learning_rate)
             loss_changes += losses
 
             print 'Epoch %d, Loss %.6f' % (epoch, loss)
@@ -177,7 +189,7 @@ class Word2VecBase(object):
         return np.mean(losses)
 
     @profile
-    def train_epoch(self, window_size, batch_size):
+    def train_epoch(self, window_size, batch_size, learning_rate):
         losses = []
 
         for batch in range(0, len(self.train_sentences), batch_size):
@@ -192,7 +204,7 @@ class Word2VecBase(object):
 
                     centers.append(center_word_idx)
                     targets.append(target_word_indexes)
-            [c_cost] = self.train_model(centers, targets)
+            [c_cost] = self.train_model(learning_rate, centers, targets)
             if batch % 10000 == 0:
                 print 'Loss:', c_cost
             losses.append(c_cost)
@@ -200,28 +212,19 @@ class Word2VecBase(object):
 
 
 class SkipGram(Word2VecBase):
-    def __init__(self, vector_size, corpus, lamb=None):
-        super(SkipGram, self).__init__(vector_size, corpus)
+    def _init_model(self):
         # [1, vector_size]
         hidden = T.nnet.relu(self.W_in[self.center_word])
 
         # [1, vector_size] x [vector_size, vocabs_size] = [1 x vocabs_size]
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
-        self.loss = -T.sum(Z.T[self.context], axis=1)
-        self.loss = self.loss.mean()
-        if lamb != None:
-            self.loss += lamb * lasagne.regularization.l2(self.W_in)
+        return -T.sum(Z.T[self.context], axis=1)
+
 
 
 class CBOW(Word2VecBase):
-    def __init__(self, vector_size, corpus, lamb=None):
-        super(CBOW, self).__init__(vector_size, corpus)
-
+    def _init_model(self):
         hidden = T.nnet.relu(T.sum(self.W_in[self.context], axis=0))
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
-        self.loss = -T.sum(Z.T[self.center_word], axis=1)
-        self.loss = self.loss.mean()
-        if lamb != None:
-            self.loss += lamb * lasagne.regularization.l2(self.W_in)
-
+        return -T.sum(Z.T[self.center_word], axis=1)
