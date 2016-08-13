@@ -23,8 +23,8 @@ def profile(func):
     return inner
 
 
-def normal(loc=0.0, scale=0.1, size=1, dtype=theano.config.floatX):
-    return np.random.normal(loc=loc, scale=scale, size=size).astype(dtype)
+def init_glorot(loc=0.0, scale=0.1, size=1, dtype=theano.config.floatX):
+    return np.random.normal(loc=loc, scale=scale, size=size).astype(dtype) * np.sqrt(2. / np.prod(size))
 
 
 class Corpus:
@@ -106,10 +106,10 @@ class Corpus:
 class Word2VecBase(object):
     def __init__(self, vector_size, corpus):
         vocabs_size = corpus.vocabs_size()
-        self.W_in = theano.shared(value=normal(scale=1./(vocabs_size * vector_size), size=[vocabs_size, vector_size]),
+        self.W_in = theano.shared(value=init_glorot(scale=1./(vocabs_size * vector_size), size=[vocabs_size, vector_size]),
                                   name='W_in', borrow=True)
 
-        self.W_out = theano.shared(value=normal(scale=1./(vocabs_size * vector_size), size=(vector_size, vocabs_size)),
+        self.W_out = theano.shared(value=init_glorot(scale=1./(vocabs_size * vector_size), size=(vector_size, vocabs_size)),
                                    name='W_out', borrow=True)
 
         nsentences = len(corpus.sentences)
