@@ -126,7 +126,7 @@ class Word2VecBase(object):
 
         self.learning_rate = T.scalar('learning_rate')
 
-        self.loss = self._init_model().mean()
+        self.loss = self._init_model()
 
         if lamb != None:
             self.loss += lamb * lasagne.regularization.l2(self.W_in)
@@ -221,14 +221,14 @@ class SkipGram(Word2VecBase):
 
         # [1, vector_size] x [vector_size, vocabs_size] = [1 x vocabs_size]
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
-        return -T.sum(Z.T[self.context], axis=1)
+        return tf.mean(-T.sum(Z.T[self.context], axis=1))
 
 
 
 class CBOW(Word2VecBase):
     def _init_model(self):
         import theano.tensor as T
-        hidden = T.nnet.relu(T.sum(self.W_in[self.context], axis=0))
+        hidden = T.nnet.relu(T.mean(self.W_in[self.context], axis=0))
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
-        return -T.sum(Z.T[self.center_word], axis=1)
+        return T.mean(-T.sum(Z.T[self.center_word], axis=1))
