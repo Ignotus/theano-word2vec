@@ -5,6 +5,7 @@ import cPickle as pickle
 
 
 import numpy as np
+import lasagne
 
 from nltk.tokenize import word_tokenize
 
