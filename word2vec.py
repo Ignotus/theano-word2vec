@@ -103,7 +103,7 @@ class Corpus:
 
 
 class Word2VecBase(object):
-    def __init__(self, vector_size, corpus, lamb=None):
+    def __init__(self, vector_size, corpus, lamb=None, update_function=lasagne.updates.adagrad):
         import theano
         import theano.tensor as T
         import lasagne
@@ -131,7 +131,7 @@ class Word2VecBase(object):
         if lamb != None:
             self.loss += lamb * lasagne.regularization.l2(self.W_in)
 
-        updates = lasagne.updates.adagrad(self.loss, [self.W_in, self.W_out], self.learning_rate)
+        updates = update_function(self.loss, [self.W_in, self.W_out], self.learning_rate)
         self.train_model = theano.function([self.learning_rate, self.center_word, self.context], [self.loss], updates=updates)
         self.eval_model = theano.function([self.center_word, self.context], [self.loss])
 
