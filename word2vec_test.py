@@ -17,9 +17,11 @@ if __name__ == '__main__':
     skip_gram = (len(sys.argv) == 1 or sys.argv[1] == '--skip_gram')
 
     if skip_gram:
+        print('SkipGram')
         trainer = SkipGram(vector_size, corpus)
         prefix = 'skip_gram'
     else:
+        print('CBOW')
         trainer = CBOW(vector_size, corpus)
         prefix = 'cbow'
     loss, loss_changes = trainer.train(context_window_size, learning_rate, epochs, batch_size)
