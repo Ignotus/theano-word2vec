@@ -217,7 +217,7 @@ class SkipGram(Word2VecBase):
         import theano.tensor as T
 
         # [1, vector_size]
-        hidden = T.nnet.relu(self.W_in[self.center_word])
+        hidden = self.W_in[self.center_word]
 
         # [1, vector_size] x [vector_size, vocabs_size] = [1 x vocabs_size]
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
@@ -228,7 +228,7 @@ class SkipGram(Word2VecBase):
 class CBOW(Word2VecBase):
     def _init_model(self):
         import theano.tensor as T
-        hidden = T.nnet.relu(T.mean(self.W_in[self.context], axis=0))
+        hidden = T.mean(self.W_in[self.context], axis=0)
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
         return T.mean(-T.sum(Z.T[self.center_word], axis=1))

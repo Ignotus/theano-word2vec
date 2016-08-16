@@ -11,7 +11,6 @@ and their Compositionality](http://papers.nips.cc/paper/5021-distributed-represe
 * AdaGrad gradient update
 * The corpus is separated into two parts. 10% is used for validation
 * L2 regularization
-* ReLU activation unit for hidden layers
 
 ## Dependencies
 
