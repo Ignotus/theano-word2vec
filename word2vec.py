@@ -229,7 +229,7 @@ class SkipGram(Word2VecBase):
 class CBOW(Word2VecBase):
     def _init_model(self):
         import theano.tensor as T
-        hidden = T.mean(self.W_in[self.context], axis=0)
+        hidden = T.sum(self.W_in[self.context], axis=0)
 
         Z = T.nnet.logsoftmax(T.dot(hidden, self.W_out))
         return T.mean(-T.sum(Z.T[self.center_word], axis=1))
